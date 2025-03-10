@@ -54,6 +54,17 @@
         (cons (rx bol (0+ whitespace) (group letter (0+ graph)) (1+ whitespace) "::" whitespace (1+ any)) '(1 font-lock-constant-face)))
   "List font locks.")
 
+(defun odin/completion ()
+  "This is the function to be used for the hook `completion-at-point-functions'."
+  (interactive)
+  (let ((bds (bounds-of-thing-at-point 'symbol))
+        start
+        end)
+    (setq start (car bds))
+    (setq end (cdr bds))
+
+    (list start end (append odin/keywords odin/types odin/constants) . nil)))
+
 ;;;###autoload
 (define-derived-mode odin-simple-mode prog-mode "Odin mode"
   :syntax-table odin-simple-mode-syntax-table
@@ -62,6 +73,8 @@
    comment-start "// "
    font-lock-defaults '((odin/fontlock))
    compile-command (format "%s " (or odin/compile-command odin/path)))
+
+  (add-hook 'completion-at-point-functions 'odin/completion nil 'local)
 
   (cl-pushnew 'odin compilation-error-regexp-alist)
   (cl-pushnew '(odin "^\\([^[:space:]]+?\\)(\\([[:digit:]]+\\):\\([[:digit:]]+\\)) .*$" 1 2 3 nil) compilation-error-regexp-alist-alist)
@@ -73,7 +86,7 @@
     :command (list odin/path "check" 'source "-file")
     :standard-input t
     :error-patterns
-    '((error line-start (file-name) "(" line ":" column ")" " Syntax Error: " (message) line-end))
+    '((error line-start (file-name) "(" line ":" column ")" (0+ any) "Error: " (message) line-end))
     :modes '(odin-simple-mode))
 
   (cl-pushnew 'odin flycheck-checkers))
